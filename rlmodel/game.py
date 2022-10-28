@@ -1,5 +1,5 @@
 from . import preprocessing
-from . import ann_network
+from . import double_dqn
 
 import gym
 import random
@@ -8,13 +8,11 @@ import numpy as np
 
 COEFF_VITESSE = 0.5
 NBR_GAME = 5
-TIME_RACE = 100
+TIME_RACE = 100	
+NBR_ACTION = 4
 
 
-BASH = {
-	"input" : [],
-	"output" : []
-}
+BASH = []
 
 class game:
 
@@ -24,14 +22,14 @@ class game:
 	def start(self):
 
 		env = gym.make("CarRacing-v0")
-		model = ann_network.Ann_Network()
+		model = double_dqn.DoubleDQN()
 		
 		for _race in range(NBR_GAME):
 		
 			state = env.reset()
-
 			img = np.array(state)
-			p = preprocessing.Prepocessing(state)
+			
+			p = preprocessing.Prepocessing(np.asarray(state))
 			p.image_preprocess()
 		
 			shape = p.image_pp.shape
@@ -39,10 +37,10 @@ class game:
 
 			#first game, we define the model
 			if _race==0:
-				model._model(shape)
+				model._model(shape,NBR_ACTION)
 				model.get_model_summary()
 			else :
-				model.fit_model(np.array(BASH["input"]),np.array(BASH["output"]))
+				model.train(BASH)
 				bash_reset()
 
 			actions = env.action_space.sample()
@@ -50,6 +48,7 @@ class game:
 			for _frame in range(TIME_RACE):
 
 				env.render()
+
 				if _frame==0: observation = state
 
 
@@ -59,9 +58,12 @@ class game:
 					output = model._predict(observation)[0]
 					actions = convert_output_to_actions(output)
 
-				
+				curr_state = p.image_pp
+
+
 				observation, reward, terminated, info = env.step(actions)
 				
+
 				img = np.array(observation)
 				p = preprocessing.Prepocessing(img)
 				p.image_preprocess()
@@ -69,11 +71,12 @@ class game:
 				p.get_pos_car()
 				is_off_track = p.get_pos_car()
 
-				output = convert_actions_to_output(actions)
+				actions = convert_actions_to_output(actions)
+				transition_state = np.array(observation)
 				
 
-				BASH["input"].append(p.image_pp)
-				BASH["output"].append(np.array(output))
+				add_to_BASH(curr_state,actions,reward,transition_state)
+				
 
 				if is_off_track==1:break
 									
@@ -103,19 +106,25 @@ class game:
 		return actions
 		
 
-
+def add_to_BASH(curr_state,action,reward,transition_state):
+	BASH.append({
+		"curr_state" : curr_state,
+		"action" : action,
+		"reward" : reward,
+		"transition_state" : transition_state
+	})
 
 def bash_reset():
-	BASH["input"],BASH["ouput"] = [],[]
+	BASH = []
 
 def convert_actions_to_output(actions):
-	output = np.zeros(4)
+	output = np.zeros((2,2))
 	if actions[0] == -1:
-		output[0]=1
-	else : output[1] = 1
+		output[0,0]=1
+	else : output[0,1] = 1
 	if actions[1]==1:
-		output[2]=1
-	else : output[3]=1
+		output[1,0]=1
+	else : output[1,1]=1
 	
 	return output
 
@@ -124,8 +133,8 @@ def convert_output_to_actions(output):
 
 	actions = [0,0,0]
 
-	direction_ar = np.array(output)[:2]
-	speed_ar = np.array(output)[2:4]
+	direction_ar = np.array(output)[0]
+	speed_ar = np.array(output)[1]
 	direction = np.argmax(direction_ar)
 	speed = np.argmax(speed_ar)
 	
