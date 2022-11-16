@@ -14,11 +14,14 @@ class Prepocessing:
         self.image = image
         self.h = image.shape[0]
         self.w = image.shape[1]
+        self.new_w = 0
+        self.new_h = 0
 
     def image_preprocess(self):    
         img = self.image
         new_img = img[:,:,0] * 0.3 + img[:,:,1] * 0.3 + img[:,:,2] * 0.3
         new_img = new_img[0:84,:]
+        self.new_h,self.new_w = new_img.shape[0],new_img.shape[1]
 
         self.image_pp = new_img
 
@@ -27,8 +30,11 @@ class Prepocessing:
     '''
     def get_pos_car(self):
         img_pp = self.image_pp
-        if img_pp[67:43] > 100 and img_pp[77:52] > 100:
-            return 1
+        for i in range(self.new_h-1):
+            for j in range(self.new_w-1):
+                if img_pp[i,j]==0 and (img_pp[i][j-1] >100 or img_pp[i][j+1]>100 ):
+                    return 1
+        
         return 0
 
     def plot_img(self,img):

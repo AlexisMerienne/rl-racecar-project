@@ -66,7 +66,7 @@ class game:
 
 				eGreedy = e_greedy(eps)
 				if _race==0 or eGreedy:
-					actions = self.random_action()
+					actions = self.random_action(False)
 					#actions = env.action_space.sample()
 				else :
 					output = model._predict(curr_state)
@@ -85,10 +85,12 @@ class game:
 				img = np.array(observation)
 				p_next_state = preprocessing.Prepocessing(img)
 				p_next_state.image_preprocess()
+				if p_next_state.get_pos_car()==1:reward=-1000
+				
 				transition_state = p_next_state.image_pp
 				
 				actions = convert_actions_to_output(actions)
-				print(actions)
+				print(reward)
 				
 
 				add_to_BASH(curr_state,actions,reward,transition_state)
@@ -110,23 +112,35 @@ class game:
 		speed + right
 		speed + forward
 	'''
-	def random_action(self):
+	def random_action(self,debug):
+		if not debug:
+			direction = random.randint(0,2)
+			speed = random.randint(0,1)
+			actions = [0,0,0]
+			if direction==0:
+				actions[0]=-1
+			if direction==1 :
+				actions[0]=1
+			else :
+				actions[0]=0
+			if speed==0:
+				actions[1]=1
+			else :
+				actions[2]=1
 
-		direction = random.randint(0,2)
-		speed = random.randint(0,1)
-		actions = [0,0,0]
-		if direction==0:
-			actions[0]=-1
-		if direction==1 :
-			actions[0]=1
+			return actions
 		else :
-			actions[0]=0
-		if speed==0:
-			actions[1]=1
-		else :
-			actions[2]=1
+			direction = random.randint(0,1)
+			actions = [0,0,0]
+			if direction==0:
+				actions[0]=-0.3
+			if direction==1 :
+				actions[0]=-0.3
+		
+			actions[1]=0.01
 
-		return actions
+			return actions
+
 		
 
 def add_to_BASH(curr_state,action,reward,transition_state):
