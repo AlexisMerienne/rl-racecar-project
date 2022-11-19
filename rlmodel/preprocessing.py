@@ -32,7 +32,7 @@ class Prepocessing:
         img_pp = self.image_pp
         for i in range(self.new_h-1):
             for j in range(self.new_w-1):
-                if img_pp[i,j]==0 and (img_pp[i][j-1] >100 or img_pp[i][j+1]>100 ):
+                if img_pp[i,j]==0 and (img_pp[i][j-1] >100 or img_pp[i][j+1]>100 or img_pp[i][j-1] <10 or img_pp[i][j+1]<10):
                     return 1
         
         return 0

@@ -1,5 +1,6 @@
 from . import preprocessing
 from . import double_dqn
+from . import actions_mapping
 
 import gym
 import random
@@ -8,10 +9,11 @@ import matplotlib.pyplot as plt
 
 
 COEFF_VITESSE = 0.5
-NBR_GAME = 10
+NBR_GAME = 20
 TIME_RACE = 1000
-NBR_ACTION = 4
-EPSILON_RATE = 5000
+EPSILON_RATE = 100000
+BREAK_RATE = 5
+N_ACTION = 100
 
 
 BASH = []
@@ -25,7 +27,7 @@ class game:
 
 		env = gym.make("CarRacing-v0")
 		model = double_dqn.DoubleDQN()
-		eps = 0.9
+		eps_init = 0.9
 		total_reward_list = [[],[]]
 		
 		for _race in range(NBR_GAME):
@@ -40,10 +42,12 @@ class game:
 			p.image_preprocess()
 		
 			shape = p.image_pp.shape
+			eps = eps_init * (NBR_GAME-_race)/NBR_GAME
+			print(eps)
 
 			#first game, we define the model
 			if _race==0:
-				model._model(shape,NBR_ACTION)
+				model._model(shape,3*(N_ACTION+1))
 				model.get_model_summary()
 			else :
 				env.close()
@@ -51,10 +55,13 @@ class game:
 				bash_reset()
 
 			actions = env.action_space.sample()
+			out_of_track = 0
 	
-			for _frame in range(TIME_RACE):
-
-				env.render()
+			#for _frame in range(TIME_RACE):
+			_frame=0
+			while(True):
+				#env.render()
+				
 
 				if _frame==0: observation = state
 
@@ -65,15 +72,19 @@ class game:
 				curr_state = p_state.image_pp	
 
 				eGreedy = e_greedy(eps)
+				print(eGreedy)
+				mapping_actions = actions_mapping.Mapping_Action(N_ACTION,BREAK_RATE)
+
 				if _race==0 or eGreedy:
-					actions = self.random_action(False)
+					actions = mapping_actions.generate_random_action()
 					#actions = env.action_space.sample()
 				else :
 					output = model._predict(curr_state)
 					s_value,advantage = output[0][0],np.array(output[1][0])
 					q_value = model.q_value(s_value,advantage)
-					actions = convert_output_to_actions(q_value)
-				eps -= (eps/EPSILON_RATE)
+					actions = mapping_actions.mapping_to_actions(q_value)
+					
+			
 
 
 
@@ -85,61 +96,39 @@ class game:
 				img = np.array(observation)
 				p_next_state = preprocessing.Prepocessing(img)
 				p_next_state.image_preprocess()
-				if p_next_state.get_pos_car()==1:reward=-1000
+				if p_next_state.get_pos_car()==1:
+					out_of_track+= 1
+					reward=-1
+				else:
+					out_of_track=0
+
+
 				
 				transition_state = p_next_state.image_pp
 				
-				actions = convert_actions_to_output(actions)
-				print(reward)
-				
-
-				add_to_BASH(curr_state,actions,reward,transition_state)
+				actions = mapping_actions.mapping_to_input(actions)
+				#si la voiture est en dehors du circuit, cela ne sert à rien d'enregistrer les frames. 
+				if out_of_track<20:
+					add_to_BASH(curr_state,actions,reward,transition_state)
 				total_reward += reward
-			
+				
+				eps -= (eps/EPSILON_RATE)
+				_frame+=1
+				
+				#Si la voiture est en dehors de la route depuis trop longtemps, on arrête la course. 
+				if out_of_track>1000:
+					break
+				
 			total_reward_list[0].append(total_reward)
 			total_reward_list[1].append(_race)
 
 		env.close()
 
-
+		model.save_model()
 		plt.plot(total_reward_list[1],total_reward_list[0])
 		plt.show()
 
-	'''
-	4 actions : 
-		break
-		speed + left
-		speed + right
-		speed + forward
-	'''
-	def random_action(self,debug):
-		if not debug:
-			direction = random.randint(0,2)
-			speed = random.randint(0,1)
-			actions = [0,0,0]
-			if direction==0:
-				actions[0]=-1
-			if direction==1 :
-				actions[0]=1
-			else :
-				actions[0]=0
-			if speed==0:
-				actions[1]=1
-			else :
-				actions[2]=1
-
-			return actions
-		else :
-			direction = random.randint(0,1)
-			actions = [0,0,0]
-			if direction==0:
-				actions[0]=-0.3
-			if direction==1 :
-				actions[0]=-0.3
-		
-			actions[1]=0.01
-
-			return actions
+	
 
 		
 
@@ -154,34 +143,8 @@ def add_to_BASH(curr_state,action,reward,transition_state):
 def bash_reset():
 	BASH = []
 
-def convert_actions_to_output(actions):
-	output = np.zeros(NBR_ACTION)
-	if actions[0] == -1  and actions[1]==1 :
-		output[0]=1
-	if actions[0] == 1 and actions[1]==1 :
-		output[1] = 1
-	if actions[0] == 0 and  actions[1]==1:
-		output[2] = 1
-	if actions[2] == 1:
-		output[3] = 1
-	
-	return output
 
 
-def convert_output_to_actions(output):
-
-	actions = [0,0,0]
-	a  = np.argmax(output)
-	if a==0:
-		actions=[-1,1,0]
-	if a==1:
-		actions=[1,1,0]
-	if a==2:
-		actions=[0,1,0]
-	if a==3:
-		actions=[0,0,1]
-
-	return actions
 
 
 def e_greedy(epsilon):

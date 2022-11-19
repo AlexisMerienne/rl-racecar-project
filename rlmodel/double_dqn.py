@@ -116,3 +116,5 @@ class DoubleDQN:
         input = np.expand_dims(input, axis=0)
         return self.model.predict(input)
         
+    def save_model(self):
+        self.model.save("ddqn_model_rl_raceracing")
