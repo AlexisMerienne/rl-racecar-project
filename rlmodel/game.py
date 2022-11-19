@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 
 
 COEFF_VITESSE = 0.5
-NBR_GAME = 20
-TIME_RACE = 1000
+NBR_GAME = 200
+TIME_RACE = 5000
 EPSILON_RATE = 100000
 BREAK_RATE = 5
-N_ACTION = 100
+N_ACTION = 10
 
 
 BASH = []
@@ -47,7 +47,7 @@ class game:
 
 			#first game, we define the model
 			if _race==0:
-				model._model(shape,3*(N_ACTION+1))
+				model._model(shape,N_ACTION*N_ACTION)
 				model.get_model_summary()
 			else :
 				env.close()
@@ -57,10 +57,10 @@ class game:
 			actions = env.action_space.sample()
 			out_of_track = 0
 	
-			#for _frame in range(TIME_RACE):
-			_frame=0
-			while(True):
-				#env.render()
+			for _frame in range(TIME_RACE):
+			
+	
+				env.render()
 				
 
 				if _frame==0: observation = state
@@ -72,7 +72,6 @@ class game:
 				curr_state = p_state.image_pp	
 
 				eGreedy = e_greedy(eps)
-				print(eGreedy)
 				mapping_actions = actions_mapping.Mapping_Action(N_ACTION,BREAK_RATE)
 
 				if _race==0 or eGreedy:
@@ -126,6 +125,8 @@ class game:
 
 		model.save_model()
 		plt.plot(total_reward_list[1],total_reward_list[0])
+		plt.xlabel("episode")
+		plt.ylabel("reward")
 		plt.show()
 
 	

@@ -37,14 +37,16 @@ class DoubleDQN:
 
         input = layers.Input(shape=shape,
                                dtype='float32', name='input')
-        conv = layers.Conv2D(3,2,activation='relu',input_shape=shape,name="convolutional_layer")(input)
+        conv_1 = layers.Conv2D(32,8,strides=(4,4),activation='relu',input_shape=shape,name="convolutional_layer_1")(input)
+        conv_2 = layers.Conv2D(64,4,strides=(2,2),activation='relu',input_shape=shape,name="convolutional_layer_2")(conv_1)
+        conv_3 = layers.Conv2D(64,3,activation='relu',input_shape=shape,name="convolutional_layer_3")(conv_2)
 
-        pool = layers.MaxPooling2D((2, 2),name="pooling")(conv)
+        pool = layers.MaxPooling2D((2, 2),name="pooling")(conv_3)
 
         flatten = layers.Flatten(name="just_flatting")(pool)
 
-        h_state_value = layers.Dense(32, activation="relu",name="hidden_layer_state_value")(flatten)
-        h_advantage_function = layers.Dense(32, activation="relu",name="hidden_layer_advantage_function")(flatten)
+        h_state_value = layers.Dense(512, activation="relu",name="hidden_layer_state_value")(flatten)
+        h_advantage_function = layers.Dense(512, activation="relu",name="hidden_layer_advantage_function")(flatten)
 
 
         output_state_value = layers.Dense(1,activation='sigmoid',name="output_state_value")(h_state_value)

@@ -19,10 +19,9 @@ class Mapping_Action():
 
     def generate_random_action(self):
         actions = [0,0,0]
-        direction = random.randint(0,2*self.n)
-        speed = random.randint(0,self.n)
-
-        actions[0] = (direction / self.n) -1
+        direction = random.randint(0,self.n)
+        speed = random.randint(0,self.n-1)
+        actions[0] = ((2 * direction) / self.n ) - 1
         if speed==0:actions[2]=self.break_value
         else :actions[1]=speed
 
@@ -34,30 +33,40 @@ class Mapping_Action():
     mapping actions of shape [3] to output of shape (3,n)
     '''
     def mapping_to_input(self,actions):
-        input = np.zeros((3,self.n+1))
+        input = np.zeros((2,self.n))
+        if actions[0]<=0:
+            input[0,round(self.n/2*(actions[0]+1))] = 1
+        elif actions[0]>0:
+            input[0,round(self.n/2*(actions[0]+1)-1)] = 1
 
-        if actions[0]<0:
-            input[0,int(-actions[0]*self.n)] = 1
-        if actions[0]>0:
-            input[1,int(actions[0]*self.n)]=1
+        
         if actions[1]!=0:
-            input[2,actions[1]] = 1
+            input[1,actions[1]] = 1
         if actions[2]!=0:
-            input[2,0] = 1
+            input[1,0] = 1
 
-        input = input.reshape(3*(self.n+1))
-        return input
+        one_hot_input = np.zeros(((self.n) * (self.n)))
+        for i in range(self.n):
+            for j in range(self.n):
+                if input[0,i]==input[1,j] == 1:
+                    one_hot_input[j*(self.n)+i]=1
+        return one_hot_input
 
     def mapping_to_actions(self,output):
         actions = [0,0,0]
-        out = output.reshape((3,self.n+1))
-        if np.sum(out[0])>np.sum(out[1]):
-            actions[0] = - np.argmax(out[0])/self.n
-        else : 
-            actions[0] = np.argmax(out[1])/self.n
-        if out[2,0]!=0:actions[2]=self.break_value
-        else: actions[1] = np.argmax(out[2]-1)
+        out = np.zeros((2,self.n))
+        action_one_hot = np.argmax(np.array(output))
+        j = action_one_hot // self.n
+        i = action_one_hot % self.n
+        out[0,i]=1
+        out[1,j]=1
 
+        actions[0] = np.argmax(out[0])*2/self.n - 1
+       
+        if out[1,0]!=0:actions[2]=self.break_value
+        else:
+            actions[1] = j
         return actions
-    
+
+
 
